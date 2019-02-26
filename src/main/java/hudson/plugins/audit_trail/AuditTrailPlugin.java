@@ -24,16 +24,22 @@
 package hudson.plugins.audit_trail;
 
 import hudson.DescriptorExtensionList;
+import hudson.Extension;
 import hudson.Plugin;
 import hudson.model.*;
 import hudson.model.Descriptor.FormException;
 import hudson.util.FormValidation;
 import hudson.util.PluginServletFilter;
+import jenkins.model.GlobalConfiguration;
 import jenkins.model.Jenkins;
 import net.sf.json.JSONObject;
+import org.jenkinsci.Symbol;
+import org.kohsuke.stapler.DataBoundConstructor;
 import org.kohsuke.stapler.QueryParameter;
 import org.kohsuke.stapler.StaplerRequest;
+import org.kohsuke.stapler.DataBoundSetter;
 
+import javax.annotation.Nonnull;
 import javax.servlet.ServletException;
 import java.io.IOException;
 import java.util.ArrayList;
@@ -50,19 +56,42 @@ public class AuditTrailPlugin extends Plugin {
       + "cancelQueue|stop|toggleLogKeep|doWipeOutWorkspace|createItem|createView|toggleOffline|"
       + "cancelQuietDown|quietDown|restart|exit|safeExit)";
     private boolean logBuildCause = true;
-
-    private List<AuditLogger> loggers = new ArrayList<AuditLogger>();
-
     private transient boolean started;
 
     private transient String log;
     private transient int limit = 1, count = 1;
 
-    public String getPattern() { return pattern; }
-    public boolean getLogBuildCause() { return logBuildCause; }
-    public List<AuditLogger> getLoggers() { return loggers; }
+    @DataBoundConstructor
+    public AuditTrailPlugin() { }
 
-    @Override public void start() throws Exception {
+    private AuditTrailGlobalConfiguration config() {
+        return AuditTrailGlobalConfiguration.get();
+    }
+
+    public List<AuditLogger> getLoggers() {
+        return config().getLoggers();
+    }
+
+    public String getPattern() {
+        return this.pattern;
+    }
+
+    @DataBoundSetter
+    public void setPattern(String pattern) {
+        this.pattern = pattern;
+    }
+
+    public boolean getLogBuildCause() {
+        return this.logBuildCause;
+    }
+
+    @DataBoundSetter
+    public void setLogBuildCause(boolean logBuildCause) {
+        this.logBuildCause = logBuildCause;
+    }
+
+    @Override
+    public void start() throws Exception {
         // Set a default value; will be overridden by load() once customized:
         load();
         applySettings();
@@ -71,32 +100,11 @@ public class AuditTrailPlugin extends Plugin {
         PluginServletFilter.addFilter(new AuditTrailFilter(this));
     }
 
-    @Override public void configure(StaplerRequest req, JSONObject formData)
-            throws IOException, ServletException, FormException {
-        pattern = formData.optString("pattern");
-        logBuildCause = formData.optBoolean("logBuildCause", true);
-        // readResolve makes sure loggers is initialized, so it should never be null.
-        loggers.forEach(AuditLogger::cleanUp);
-        loggers = Descriptor.newInstancesFromHeteroList(
-                req, formData, "loggers", getLoggerDescriptors());
-        save();
-        applySettings();
-    }
-
-    public DescriptorExtensionList<AuditLogger, Descriptor<AuditLogger>> getLoggerDescriptors() {
-        return Jenkins.getInstance().getDescriptorList(AuditLogger.class);
-    }
-
-
     private void applySettings() {
         try {
             AuditTrailFilter.setPattern(pattern);
         }
         catch (PatternSyntaxException ex) { ex.printStackTrace(); }
-
-        for (AuditLogger logger : loggers) {
-            logger.configure();
-        }
         started = true;
     }
 
@@ -111,7 +119,8 @@ public class AuditTrailPlugin extends Plugin {
             }
             if (buf.length() == 0) buf.append("Started");
 
-            for (AuditLogger logger : loggers) {
+            for (AuditLogger logger : getLoggers()) {
+                logger.configure();
                 logger.log(run.getParent().getUrl() + " #" + run.getNumber() + ' ' + buf.toString());
             }
 
@@ -136,7 +145,7 @@ public class AuditTrailPlugin extends Plugin {
             }
             if (causeBuilder.length() == 0) causeBuilder.append("Started");
 
-            for (AuditLogger logger : loggers) {
+            for (AuditLogger logger : getLoggers()) {
                 String message = build.getFullDisplayName() +
                         " " + causeBuilder.toString() +
                         " on node " + buildNodeName(build) +
@@ -160,7 +169,7 @@ public class AuditTrailPlugin extends Plugin {
 
     /* package */ void onRequest(String uri, String extra, String username) {
         if (this.started) {
-            for (AuditLogger logger : loggers) {
+            for (AuditLogger logger : getLoggers()) {
                 logger.log(uri + extra + " by " + username);
             }
         }
@@ -172,12 +181,12 @@ public class AuditTrailPlugin extends Plugin {
      */
     private Object readResolve() {
         if (log != null) {
-            if (loggers == null) {
-                loggers = new ArrayList<AuditLogger>();
+            if (getLoggers() == null) {
+                config().setLoggers(new ArrayList<AuditLogger>());
             }
             LogFileAuditLogger logger = new LogFileAuditLogger(log, limit, count);
-            if (!loggers.contains(logger))
-                loggers.add(logger);
+            if (!getLoggers().contains(logger))
+                getLoggers().add(logger);
             log = null;
         }
         return this;

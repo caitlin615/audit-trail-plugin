@@ -10,12 +10,15 @@ import hudson.Extension;
 import hudson.model.Descriptor;
 import hudson.util.ListBoxModel;
 import org.kohsuke.stapler.DataBoundConstructor;
+import org.kohsuke.stapler.DataBoundSetter;
 
 import javax.annotation.Nullable;
 import java.io.IOException;
 import java.util.Arrays;
 import java.util.logging.Level;
 import java.util.logging.Logger;
+
+import org.jenkinsci.Symbol;
 
 /**
  * Default values are set in <code>/src/main/resources/hudson/plugins/audit_trail/SyslogAuditLogger/config.jelly</code>
@@ -93,24 +96,54 @@ public class SyslogAuditLogger extends AuditLogger {
         return syslogServerHostname;
     }
 
+    @DataBoundSetter
+    public void setSyslogServerHostname(String syslogServerHostname) {
+        this.syslogServerHostname = trimToNull(syslogServerHostname);
+    }
+
     public int getSyslogServerPort() {
         return syslogServerPort;
+    }
+
+    @DataBoundSetter
+    public void setSyslogServerPort(int syslogServerPort) {
+        this.syslogServerPort = defaultValue(syslogServerPort, DEFAULT_SYSLOG_SERVER_PORT);
     }
 
     public String getAppName() {
         return appName;
     }
 
+    @DataBoundSetter
+    public void setAppName(String appName) {
+        this.appName = defaultValue(trimToNull(appName), DEFAULT_APP_NAME);
+    }
+
     public String getMessageHostname() {
         return messageHostname;
+    }
+
+    @DataBoundSetter
+    public void setMessageHostname(String messageHostname) {
+        this.messageHostname = trimToNull(messageHostname);
     }
 
     public String getFacility() {
         return facility == null ? null : facility.label();
     }
 
+    @DataBoundSetter
+    public void setFacility(String facility) {
+        this.facility = defaultValue(Facility.fromLabel(trimToNull(facility)), DEFAULT_FACILITY);
+    }
+
     public String getMessageFormat() {
         return messageFormat == null ? null : messageFormat.name();
+    }
+
+    @DataBoundSetter
+    public void setMessageFormat(String messageFormat) {
+        this.messageFormat = MessageFormat.valueOf(defaultValue(trimToNull(messageFormat), DEFAULT_MESSAGE_FORMAT.toString()));
     }
 
     public String getNetworkProtocol() {
@@ -179,7 +212,7 @@ public class SyslogAuditLogger extends AuditLogger {
 
     }
 
-
+    @Symbol("syslog")
     @Extension
     public static class DescriptorImpl extends Descriptor<AuditLogger> {
 

@@ -1,8 +1,11 @@
 package hudson.plugins.audit_trail;
 
+import net.sf.json.JSONObject;
 import hudson.Extension;
 import hudson.model.Descriptor;
 import org.kohsuke.stapler.DataBoundConstructor;
+import org.kohsuke.stapler.DataBoundSetter;
+import org.kohsuke.stapler.StaplerRequest;
 
 import java.io.IOException;
 import java.text.SimpleDateFormat;
@@ -10,6 +13,8 @@ import java.util.Date;
 import java.util.logging.FileHandler;
 import java.util.logging.Formatter;
 import java.util.logging.LogRecord;
+
+import org.jenkinsci.Symbol;
 
 import static java.util.logging.Level.CONFIG;
 
@@ -39,9 +44,24 @@ public class LogFileAuditLogger extends AuditLogger {
 
     public String getLog() { return log; }
 
+    @DataBoundSetter
+    public void setLog(String log) {
+        this.log = log;
+    }
+
     public int getLimit() { return limit; }
 
+    @DataBoundSetter
+    public void setLimit(int limit) {
+        this.limit = limit;
+    }
+
     public int getCount() { return count; }
+
+    @DataBoundSetter
+    public void setCount(int count) {
+        this.count = count;
+    }
 
     @Override
     public boolean equals(Object o) {
@@ -90,6 +110,7 @@ public class LogFileAuditLogger extends AuditLogger {
         }
     }
 
+    @Symbol("logfile")
     @Extension
     public static class DescriptorImpl extends Descriptor<AuditLogger> {
 

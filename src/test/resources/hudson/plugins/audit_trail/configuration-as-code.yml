@@ -1,0 +1,17 @@
+---
+unclassified:
+  audit-trail:
+    loggers:
+      - logfile:
+          log: "/var/log/jenkins/audit.log"
+          limit: 50
+          count: 10
+      - syslog:
+          syslogServerHostname: "my.syslog.server"
+          syslogServerPort: 514
+          messageFormat: "RFC_3164"
+          facility: "USER"
+      - console:
+          logPrefix: "my_log_prefix"
+          dateFormat: "yyyy-MM-dd HH:mm:ss:SSS"
+          output: "STD_OUT"

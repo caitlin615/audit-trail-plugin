@@ -3,11 +3,15 @@ package hudson.plugins.audit_trail;
 import hudson.Extension;
 import hudson.model.Descriptor;
 import hudson.util.ListBoxModel;
+import org.jenkinsci.Symbol;
 import org.kohsuke.stapler.DataBoundConstructor;
+import org.kohsuke.stapler.DataBoundSetter;
 
 import java.io.PrintStream;
 import java.text.SimpleDateFormat;
 import java.util.Date;
+
+import org.jenkinsci.Symbol;
 
 /**
  * @author <a href="mailto:cleclerc@cloudbees.com">Cyrille Le Clerc</a>
@@ -15,9 +19,9 @@ import java.util.Date;
 public class ConsoleAuditLogger extends AuditLogger {
     public enum Output {STD_OUT, STD_ERR}
 
-    private final Output output;
-    private final String dateFormat;
-    private final String logPrefix;
+    private Output output;
+    private String dateFormat;
+    private String logPrefix;
     private transient PrintStream out;
     private transient SimpleDateFormat sdf;
     private transient String logPrefixPadded;
@@ -70,12 +74,36 @@ public class ConsoleAuditLogger extends AuditLogger {
         return output;
     }
 
+    @DataBoundSetter
+    public void setOutput(String output) {
+        this.output = Output.valueOf(output);
+        if (this.output != Output.STD_ERR && this.output != Output.STD_OUT) {
+            throw new IllegalArgumentException("Unsupported output " + output);
+        }
+    }
+
     public String getDateFormat() {
         return this.dateFormat;
     }
 
+    @DataBoundSetter
+    public void setDateFormat(String dateFormat) {
+        if (dateFormat == null) {
+            throw new NullPointerException("dateFormat can not be null");
+        }
+        this.dateFormat = dateFormat;
+
+        // validate the dataFormat
+        new SimpleDateFormat(dateFormat);
+    }
+
     public String getLogPrefix() {
         return this.logPrefix;
+    }
+
+    @DataBoundSetter
+    public void setLogPrefix(String logPrefix) {
+        this.logPrefix = logPrefix;
     }
 
     private Boolean hasLogPrefix() {
@@ -93,6 +121,7 @@ public class ConsoleAuditLogger extends AuditLogger {
         return " - ";
     }
 
+    @Symbol("console")
     @Extension
     public static class DescriptorImpl extends Descriptor<AuditLogger> {
 
